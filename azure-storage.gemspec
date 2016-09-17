@@ -47,14 +47,14 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency('nokogiri',                '~> 1.6')
   s.add_runtime_dependency('systemu',                 '~> 2.6')
   s.add_runtime_dependency('thor',                    '~> 0.19')
-  
-  s.add_development_dependency('coveralls',           '~> 1.8.3')
-  s.add_development_dependency('tins',                '~> 1.6.0')
-  s.add_development_dependency('dotenv',              '~> 2.0') 
-  s.add_development_dependency('minitest',            '~> 5') 
-  s.add_development_dependency('minitest-reporters',  '~> 1') 
-  s.add_development_dependency('mocha',               '~> 1.0') 
-  s.add_development_dependency('rake',                '~> 10.0') 
-  s.add_development_dependency('timecop',             '~> 0.7') 
-  s.add_development_dependency('yard',                '~> 0.8')
+
+  s.add_development_dependency('coveralls',           '~> 0.8.13')
+#  s.add_development_dependency('dotenv',              '~> 2.0')
+#  s.add_development_dependency('minitest',            '~> 5')
+#  s.add_development_dependency('minitest-reporters',  '~> 1')
+#  s.add_development_dependency('mocha',               '~> 1.0')
+#  s.add_development_dependency('rake',                '~> 10.0')
+#  s.add_development_dependency('timecop',             '~> 0.7')
+#  s.add_development_dependency('tins',                '~> 1.6.0') # To make it compatible wiht Ruby 1.9
+#  s.add_development_dependency('yard',                '~> 0.8')
 end
