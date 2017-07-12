@@ -83,6 +83,15 @@ module Azure::Storage::Core
         endrk:                :erk
       }
 
+      FILE_KEY_MAPPINGS = {
+        resource:             :sr,
+        cache_control:        :rscc,
+        content_disposition:  :rscd,
+        content_encoding:     :rsce,
+        content_language:     :rscl,
+        content_type:         :rsct
+      }
+
       SERVICE_OPTIONAL_QUERY_PARAMS = [:sp, :si, :sip, :spr, :rscc, :rscd, :rsce, :rscl, :rsct, :spk, :srk, :epk, :erk]
 
       ACCOUNT_OPTIONAL_QUERY_PARAMS = [:st, :sip, :spr]
@@ -151,9 +160,16 @@ module Azure::Storage::Core
         elsif service_type == Azure::Storage::ServiceType::TABLE
           options.merge!(table_name: path)
           valid_mappings.merge!(TABLE_KEY_MAPPINGS)
+        elsif service_type == Azure::Storage::ServiceType::FILE
+          if options[:resource]
+            options.merge!(resource: options[:resource])
+          else
+            options.merge!(resource: 'f')
+          end
+          valid_mappings.merge!(FILE_KEY_MAPPINGS)
         end
 
-        invalid_options = options.reject { |k,v| valid_mappings.key?(k) }
+        invalid_options = options.reject { |k, _| valid_mappings.key?(k) }
         raise Azure::Storage::InvalidOptionsError,"invalid options #{invalid_options} provided for SAS token generate" if invalid_options.length > 0
 
         canonicalize_time(options)
@@ -162,7 +178,7 @@ module Azure::Storage::Core
         .reject { |k, v| SERVICE_OPTIONAL_QUERY_PARAMS.include?(k) && v.to_s == '' }
         .merge( sig: @signer.sign(signable_string_for_service(service_type, path, options)) )
         
-        sas_params = URI.encode_www_form(query_hash)
+        URI.encode_www_form(query_hash)
       end
 
       # Construct the plaintext to the spec required for signatures
@@ -188,7 +204,7 @@ module Azure::Storage::Core
           options[:content_encoding],
           options[:content_language],
           options[:content_type]
-        ] if service_type == Azure::Storage::ServiceType::BLOB
+        ] if service_type == Azure::Storage::ServiceType::BLOB || service_type == Azure::Storage::ServiceType::FILE
 
         signable_fields.concat [
           options[:startpk],
@@ -222,7 +238,7 @@ module Azure::Storage::Core
         options = DEFAULTS.merge(options)
         valid_mappings = ACCOUNT_KEY_MAPPINGS
 
-        invalid_options = options.reject { |k,v| valid_mappings.key?(k) }
+        invalid_options = options.reject { |k, _| valid_mappings.key?(k) }
         raise Azure::Storage::InvalidOptionsError,"invalid options #{invalid_options} provided for SAS token generate" if invalid_options.length > 0
 
         canonicalize_time(options)
@@ -231,7 +247,7 @@ module Azure::Storage::Core
         .reject { |k, v| ACCOUNT_OPTIONAL_QUERY_PARAMS.include?(k) && v.to_s == '' }
         .merge( sig: @signer.sign(signable_string_for_account(options)) )
         
-        sas_params = URI.encode_www_form(query_hash)
+        URI.encode_www_form(query_hash)
       end
 
       # Construct the plaintext to the spec required for signatures
@@ -239,7 +255,6 @@ module Azure::Storage::Core
       def signable_string_for_account(options)
         # Order is significant
         # The newlines from empty strings here are required
-        signable_string =
         [
           @account_name,
           options[:permissions],
@@ -311,7 +326,7 @@ module Azure::Storage::Core
       # * +:startrk+              - String. Optional. The start row key of a specified row key range.
       # * +:endrk+                - String. Optional. The end row key of a specified row key range.
       def signed_uri(uri, use_account_sas, options)
-        parsed_query = CGI::parse(uri.query || '').inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
+        CGI::parse(uri.query || '').inject({}){|memo,(k,v)| memo[k.to_sym] = v; memo}
 
         if options[:service] == nil and uri.host != nil
           host_splits = uri.host.split('.')
@@ -324,7 +339,7 @@ module Azure::Storage::Core
                        generate_service_sas_token(uri.path, options)
                      end
 
-        result = URI.parse(uri.to_s + (uri.query.nil? ? '?' : '&') + sas_params)
+        URI.parse(uri.to_s + (uri.query.nil? ? '?' : '&') + sas_params)
       end
     end
   end

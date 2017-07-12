@@ -27,9 +27,11 @@ require 'azure/storage/core/http_client'
 
 require 'azure/storage/client_options'
 
+require 'azure/storage/service/storage_service'
 require 'azure/storage/blob/blob_service'
 require 'azure/storage/table/table_service'
 require 'azure/storage/queue/queue_service'
+require 'azure/storage/file/file_service'
 
 module Azure::Storage
   class Client
@@ -49,6 +51,7 @@ module Azure::Storage
     #
     # * +:use_development_storage+        - True. Whether to use storage emulator.
     # * +:development_storage_proxy_uri+  - String. Used with +:use_development_storage+ if emulator is hosted other than localhost.
+    # * +:storage_connection_string+      - String. The storage connection string.
     # * +:storage_account_name+           - String. The name of the storage account.
     # * +:storage_access_key+             - Base64 String. The access key of the storage account.
     # * +:storage_sas_token+              - String. The signed access signiture for the storage account or one of its service.
@@ -59,6 +62,7 @@ module Azure::Storage
     # * +:default_endpoints_protocol+     - String. http or https
     # * +:use_path_style_uri+             - String. Whether use path style URI for specified endpoints
     # * +:ca_file+                        - String. File path of the CA file if having issue with SSL
+    # * +:user_agent_prefix+              - String. The user agent prefix that can identify the application calls the library
     #
     # The valid set of options inlcude:
     # * Storage Emulator: +:use_development_storage+ required, +:development_storage_proxy_uri+ optionally
@@ -76,19 +80,19 @@ module Azure::Storage
     # When empty options are given, it will try to read settings from Environment Variables. Refer to [Azure::Storage::ClientOptions.env_vars_mapping] for the mapping relationship
     #
     # @return [Azure::Storage::Client]
-    def initialize(options = {})
-      if options.is_a?(Hash)
-        options = setup_options if options.length == 0
-        options = parse_connection_string(options[:storage_connection_string]) if options[:storage_connection_string]
+    def initialize(options = {}, &block)
+      if options.is_a?(Hash) and options.has_key?(:user_agent_prefix)
+        Azure::Storage::Service::StorageService.user_agent_prefix = options[:user_agent_prefix]
+        options.delete :user_agent_prefix
       end
-
+      Azure::Storage::Service::StorageService.register_request_callback &block if block_given?
       reset!(options)
     end
 
     # Azure Blob service client configured from this Azure Storage client instance
     # @return [Azure::Storage::Blob::BlobService]
-    def blob_client(options = {})
-      @blob_client ||= Azure::Storage::Blob::BlobService.new(default_client(options))
+    def blob_client(options = {}, &block)
+      @blob_client ||= Azure::Storage::Blob::BlobService.new(default_client(options), &block)
     end
 
     # Azure Queue service client configured from this Azure Storage client instance
@@ -103,8 +107,13 @@ module Azure::Storage
       @table_client ||= Azure::Storage::Table::TableService.new(default_client(options))
     end
 
-    class << self
+    # Azure File service client configured from this Azure Storage client instance
+    # @return [Azure::Storage::File::FileService]
+    def file_client(options = {})
+      @file_client ||= Azure::Storage::File::FileService.new(default_client(options))
+    end
 
+    class << self
       # Public: Creates an instance of [Azure::Storage::Client]
       #
       # ==== Attributes
@@ -127,6 +136,7 @@ module Azure::Storage
       # * +:default_endpoints_protocol+     - String. http or https
       # * +:use_path_style_uri+             - String. Whether use path style URI for specified endpoints
       # * +:ca_file+                        - String. File path of the CA file if having issue with SSL
+      # * +:user_agent_prefix+              - String. The user agent prefix that can identify the application calls the library
       #
       # The valid set of options inlcude:
       # * Storage Emulator: +:use_development_storage+ required, +:development_storage_proxy_uri+ optionally
@@ -144,8 +154,8 @@ module Azure::Storage
       # When empty options are given, it will try to read settings from Environment Variables. Refer to [Azure::Storage::ClientOptions.env_vars_mapping] for the mapping relationship
       #
       # @return [Azure::Storage::Client]
-      def create(options={})
-        Client.new(options)
+      def create(options={}, &block)
+        Client.new(options, &block)
       end
 
       # Public: Creates an instance of [Azure::Storage::Client] with Storage Emulator
@@ -155,17 +165,16 @@ module Azure::Storage
       # * +proxy_uri+    - String. Used with +:use_development_storage+ if emulator is hosted other than localhost.
       #
       # @return [Azure::Storage::Client]
-      def create_development(proxy_uri=nil)
+      def create_development(proxy_uri=nil, &block)
         proxy_uri ||= StorageServiceClientConstants::DEV_STORE_URI
-        create(:use_development_storage => true, :development_storage_proxy_uri => proxy_uri)
+        create(:use_development_storage => true, :development_storage_proxy_uri => proxy_uri, &block)
       end
-
 
       # Public: Creates an instance of [Azure::Storage::Client] from Environment Variables
       #
       # @return [Azure::Storage::Client]
-      def create_from_env
-        create
+      def create_from_env(&block)
+        create &block
       end
 
       # Public: Creates an instance of [Azure::Storage::Client] from Environment Variables
@@ -175,8 +184,8 @@ module Azure::Storage
       # * +connection_string+    - String. Please refer to https://azure.microsoft.com/en-us/documentation/articles/storage-configure-connection-string/.
       #
       # @return [Azure::Storage::Client]
-      def create_from_connection_string(connection_string)
-        Client.new(connection_string)
+      def create_from_connection_string(connection_string, &block)
+        Client.new(connection_string, &block)
       end
     end
 

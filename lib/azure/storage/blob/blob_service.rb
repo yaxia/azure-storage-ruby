@@ -38,21 +38,21 @@ module Azure::Storage
       include Azure::Storage::Blob
       include Azure::Storage::Blob::Container
       
-      def initialize(options = {})
+      def initialize(options = {}, &block)
         client_config = options[:client] || Azure::Storage
-        signer = options[:signer] || Azure::Storage::Core::Auth::SharedKey.new(client_config.storage_account_name, client_config.storage_access_key)
-        super(signer, client_config.storage_account_name, options)
+        signer = options[:signer] || client_config.signer || Azure::Storage::Core::Auth::SharedKey.new(client_config.storage_account_name, client_config.storage_access_key)
+        super(signer, client_config.storage_account_name, options, &block)
         @host = client.storage_blob_host
       end
 
       def call(method, uri, body=nil, headers={}, options={})
         # Force the request.body to the content encoding of specified in the header
-        if headers && !body.nil? && !(body.encoding.to_s <=> 'ASCII_8BIT')
+        if headers && !body.nil? && (body.is_a? String) && ((body.encoding.to_s <=> 'ASCII_8BIT') != 0)
           if headers['x-ms-blob-content-type'].nil?
-            Service::StorageService.with_header headers, 'x-ms-blob-content-type', "text/plain; charset=#{body.encoding.to_s}"
+            Service::StorageService.with_header headers, 'x-ms-blob-content-type', "text/plain; charset=#{body.encoding}"
           else
             charset = parse_charset_from_content_type(headers['x-ms-blob-content-type'])
-            body.force_encoding(charset)
+            body.force_encoding(charset) if charset
           end
         end
 
@@ -177,7 +177,7 @@ module Azure::Storage
         else
           uri = container_uri(container, query)
         end
-        
+
         duration = -1
         duration = options[:duration] if options[:duration]
 
@@ -469,19 +469,9 @@ module Azure::Storage
         if container_name.nil? || container_name.empty?
           path = blob_name
         else
-          path = File.join(container_name, blob_name)
+          path = ::File.join(container_name, blob_name)
         end
-
-        path = CGI.escape(path.encode('UTF-8'))
-
-        # Unencode the forward slashes to match what the server expects.
-        path = path.gsub(/%2F/, '/')
-        # Unencode the backward slashes to match what the server expects.
-        path = path.gsub(/%5C/, '/')
-        # Re-encode the spaces (encoded as space) to the % encoding.
-        path = path.gsub(/\+/, '%20')
-
-        generate_uri(path, query)
+        generate_uri(path, query, true)
       end
       
       # Adds conditional header with required condition

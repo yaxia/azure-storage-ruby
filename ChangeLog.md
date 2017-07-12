@@ -1,3 +1,38 @@
+2017.04 - version 0.12.1-preview
+
+ALL
+* Relaxed constraint on Nokogiri version dependency to allow Nokogiri 1.7.x for Ruby 2.1 and later, but preserving support for Ruby 1.9.3. (Note that this may require updating to Bundler 1.13 or later if you're using Ruby 1.9 or 2.0.)
+
+2017.02 - version 0.12.0-preview
+
+ALL
+* Fixed the issue where `should_retry?` in the retry_filter.rb overwrites the result from derived `apply_retry_policy`. [#76](https://github.com/Azure/azure-storage-ruby/issues/76)
+* Fixed the issue where `Azure::Storage::Client.create_from_connection_string` throws an exception. [#77](https://github.com/Azure/azure-storage-ruby/issues/77)
+* Added the support for setting the "timeout" option in `get_service_properties` and `set_service_properties`.
+
+BLOB
+* Added the metadata to the returning instance when creates a blob.
+* Added `transactional_md5` to the options of `put_blob_pages`.
+
+FILE
+* Added File Service support, targeting storage service version 2015-04-05.
+
+2016.12 - version 0.11.5-preview
+
+ALL
+* Added the support for setting customer user agent. [#71](https://github.com/Azure/azure-storage-ruby/issues/71)
+* Added the support for hooking in sending requests.
+
+2016.11 - version 0.11.4-preview
+
+ALL
+* Removed the unnecessary dependencies. [#55](https://github.com/Azure/azure-storage-ruby/issues/55), [#67](https://github.com/Azure/azure-storage-ruby/issues/67)
+
+BLOB
+* Fixed the issue when checking the content encoding.
+* Fixed the wrong "Content-Encoding" value in the test cases.
+* Fixed the issue where it cannot use the `create_block_blob` method with an IO/File object. [#61](https://github.com/Azure/azure-storage-ruby/issues/61)
+
 2016.10 - version 0.11.3-preview
 
 ALL

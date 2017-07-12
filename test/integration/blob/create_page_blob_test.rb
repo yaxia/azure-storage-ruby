@@ -64,7 +64,7 @@ describe Azure::Storage::Blob::BlobService do
     it 'sets additional properties when the options hash is used' do
       options = {
         :content_type=>"application/xml",
-        :content_encoding=>"utf-8",
+        :content_encoding=>"gzip",
         :content_language=>"en-US",
         :cache_control=>"max-age=1296000",
         :metadata => { "CustomMetadataProperty"=>"CustomMetadataValue"}
@@ -77,6 +77,7 @@ describe Azure::Storage::Blob::BlobService do
       blob.properties[:content_type].must_equal options[:content_type]
       blob.properties[:content_encoding].must_equal options[:content_encoding]
       blob.properties[:cache_control].must_equal options[:cache_control]
+      blob.metadata["custommetadataproperty"].must_equal "CustomMetadataValue"
 
       blob = subject.get_blob_metadata container_name, blob_name
       blob.name.must_equal blob_name

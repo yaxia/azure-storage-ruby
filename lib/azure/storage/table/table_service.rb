@@ -31,10 +31,10 @@ module Azure::Storage
   module Table
     class TableService < Service::StorageService
 
-      def initialize(options = {})
+      def initialize(options = {}, &block)
         client_config = options[:client] || Azure::Storage
-        signer = options[:signer] || Auth::SharedKey.new(client_config.storage_account_name, client_config.storage_access_key)
-        super(signer, client_config.storage_account_name, options)
+        signer = options[:signer] || client_config.signer || Auth::SharedKey.new(client_config.storage_account_name, client_config.storage_access_key)
+        super(signer, client_config.storage_account_name, options, &block)
         @host = client.storage_table_host
       end
 
@@ -236,7 +236,6 @@ module Azure::Storage
         query['timeout'] = options[:timeout].to_s if options[:timeout]
 
         response = call(:post, entities_uri(table_name, nil, nil, query), body, {}, options)
-        
         result = Table::Serialization.hash_from_entry_xml(response.body)
 
         Entity.new do |entity|
@@ -469,7 +468,6 @@ module Azure::Storage
 
         query = { }
         query["timeout"] = options[:timeout].to_s if options[:timeout]
-
         call(:delete, entities_uri(table_name, partition_key, row_key, query), nil, { "If-Match"=> if_match }, options)
         nil
       end
@@ -569,12 +567,12 @@ module Azure::Storage
         return table_name if table_name.kind_of? ::URI
 
         path = if partition_key && row_key
-          "%s(PartitionKey='%s',RowKey='%s')" % [
-            table_name.encode("UTF-8"), encodeODataUriValue(partition_key.encode("UTF-8")), encodeODataUriValue(row_key.encode("UTF-8"))
-          ]
-        else
-          "%s()" % table_name.encode("UTF-8")
-        end
+               "%s(PartitionKey='%s',RowKey='%s')" % [
+                 table_name.encode("UTF-8"), encodeODataUriValue(partition_key.encode("UTF-8")), encodeODataUriValue(row_key.encode("UTF-8"))
+               ]
+               else
+                 "%s()" % table_name.encode("UTF-8")
+               end
 
         uri = generate_uri(path)
         qs = []
