@@ -1,3 +1,6 @@
+require 'json'
+require "base64"
+
 require 'azure/storage/blob'
 require 'azure/storage/common'
 require "azure/core/http/debug_filter"
@@ -6,20 +9,31 @@ account_name = 'mytestaccount'
 container_name = 'mytestcontainer'
 block_blob_name = 'mytestblockblob'
 
-# Fetch your initial token here
-token = ""
-cred = Azure::Storage::Common::Core::TokenCredential.new token
+def get_refresh_time_from_access_token(token)
+  plain = Base64.decode64(token.split('.')[1])
+  token_hash = JSON.parse plain
+  expire_time_in_seconds = token_hash["exp"] - Time.now.to_i
+  raise "The token has expired" if expire_time_in_seconds < 0
 
-refresh_interval = 5
+  # Max of 1 minute and 5 minutes before the token gets expired
+  [60, expire_time_in_seconds - (5 * 60)].max
+end
+
+# Fetch your initial token here
+initial_token = ""
+next_refresh_time = get_refresh_time_from_access_token initial_token
+cred = Azure::Storage::Common::Core::TokenCredential.new initial_token
+
 cancelled = false
 renew_token = Thread.new do
   Thread.stop
   while !cancelled
-    sleep(refresh_interval)
+    sleep(next_refresh_time)
     puts "{DEBUG} Refresh token"
   
     # Renew token
     new_token = 'new_token'
+    next_refresh_time = get_refresh_time_from_access_token new_token
     cred.renew_token new_token
   end
 end
